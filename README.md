@@ -176,6 +176,14 @@ This bypasses `fetchurl` while keeping the rest of the packaging (FHS wrapping, 
 - `allowUnfree = true` (Antigravity is proprietary software)
 - On `aarch64-linux`, Chromium is used automatically since Google Chrome is unavailable
 
+## Contributors
+
+| Contributor | Role |
+|---|---|
+| [jacopone](https://github.com/jacopone) | Original author |
+| [UnbreakableMJ](https://github.com/UnbreakableMJ) | Maintainer |
+| [Claude](https://claude.ai) (Anthropic) | AI contributor — code review, packaging improvements, documentation |
+
 ## Contributing
 
 1. Fork the repository
