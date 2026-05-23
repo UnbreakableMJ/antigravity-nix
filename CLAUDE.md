@@ -4,40 +4,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**antigravity-nix** is an auto-updating Nix Flake that packages Google Antigravity (a proprietary agentic IDE) for NixOS systems. It uses browser automation to detect new versions and automatically creates PRs with updates daily at 07:00 UTC.
+**antigravity-nix** is an auto-updating Nix Flake that packages Google Antigravity (a proprietary agentic IDE) for NixOS systems. It uses direct API requests to detect new versions and automatically creates PRs with updates daily at 07:00 UTC.
 
 **Key Challenge**: Antigravity is a binary distribution that requires a standard Linux filesystem layout, which conflicts with NixOS's unique structure. This is solved using `buildFHSEnv` to create an isolated FHS environment.
 
 ## Architecture
 
-### Two-Stage Build Process
+### Three Components
 
-1. **antigravity-unwrapped** (package.nix:53-77): Extracts the upstream tarball into `/nix/store` without modification
-2. **FHS Environment** (package.nix:80-135): Wraps the binary in a container with standard Linux paths and all required libraries
+This flake packages three components:
+
+1. **Antigravity 2.0** (`google-antigravity` / `default`): The base agentic app
+2. **Antigravity IDE** (`google-antigravity-ide`): The full IDE (previously the main package)
+3. **Antigravity CLI** (`google-antigravity-cli`): The `agy` CLI tool
+
+### Package Layout
+
+- `artifacts/versions.json`: Source-of-truth JSON holding resolved URLs and SRI hashes for every component and platform
+- `pkgs/package.nix`: Shared GUI packaging logic (supports both Base App and IDE via `appType` parameter)
+- `pkgs/google-antigravity2.nix`: Entry point for the Base App
+- `pkgs/google-antigravity-ide.nix`: Entry point for the IDE
+- `pkgs/cli.nix`: CLI package derivation
+
+### Two-Stage GUI Build Process
+
+For each GUI app (Base App and IDE):
+
+1. **`antigravity-unwrapped`**: Extracts the upstream tarball into `/nix/store` without modification
+2. **FHS Environment** (or autoPatchelf): Wraps the binary in a container with standard Linux paths and all required libraries
 
 ### Chrome Integration Strategy
 
-Antigravity requires Chrome to be available. The package creates a Chrome wrapper (package.nix:44-50) that:
+Antigravity GUI apps require Chrome to be available. The `pkgs/package.nix` wrapper:
 - Forces use of the user's existing Chrome profile (`~/.config/google-chrome`)
 - Ensures any Chrome extensions the user has installed are available to Antigravity
-- Sets `CHROME_BIN` and `CHROME_PATH` environment variables (package.nix:128-129)
+- Sets `CHROME_BIN` and `CHROME_PATH` environment variables
 
 ### Version Detection Architecture
 
-The update workflow uses **browser automation** (not curl) because Antigravity's download page is JavaScript-rendered:
+The update workflow uses API requests (via `curl` and `jq`) to Google Cloud Run endpoints to fetch the latest builds:
 
-- `scripts/scrape-version.js`: Playwright-based scraper that loads the page with a real browser
-- `scripts/check-version.sh`: Quick version comparison (current vs. latest)
-- `scripts/update-version.sh`: Full update process (version + hash + build test)
+- `scripts/check-version.sh`: Quick API queries to determine if any component has an update
+- `scripts/update-version.sh`: Full update process (version + hash verification via `nix-prefetch-url`)
+- `artifacts/versions.json`: The source-of-truth JSON dictionary holding resolved URLs and SRI hashes for every component and platform
 
-**Important**: The scraper requires `playwright-chromium` to be installed and browsers to be downloaded (`npx playwright install chromium`).
+**Important**: Web scraping via Playwright has been completely removed in favor of direct API interaction.
 
 ## Common Commands
 
 ### Building and Testing
 
 ```bash
-# Build the package
+# Build the default package (Base App)
 nix build .#default
 
 # Test run without installing
@@ -46,27 +64,22 @@ nix run .#default
 # Build and check flake
 nix flake check
 
-# Update flake lock
-nix flake update
+# Build the CLI
+nix build .#google-antigravity-cli
 ```
 
 ### Version Management
 
 ```bash
+# Enter the dev shell with necessary tools (jq, curl, gh)
+nix develop
+
 # Check for new version (no changes)
 ./scripts/check-version.sh
 
-# Update to latest version (modifies files, builds, commits)
+# Update to latest version (modifies versions.json, builds, commits)
 ./scripts/update-version.sh
-
-# Manually test version scraping
-node scripts/scrape-version.js
 ```
-
-**Prerequisites for version scripts**:
-- Node.js 20+
-- `npm install -g playwright-chromium`
-- `npx playwright install chromium`
 
 ### GitHub Workflows
 
@@ -75,9 +88,6 @@ node scripts/scrape-version.js
 ```bash
 # Manually trigger update workflow
 gh workflow run update.yml
-
-# Trigger with specific inputs
-gh workflow run cleanup-branches.yml -f dry_run=true
 
 # View workflow runs
 gh run list --workflow=update.yml
@@ -88,17 +98,17 @@ gh run view <run-id>
 
 ### Hash Updates
 
-When updating versions, the hash must be updated in two steps (scripts/update-version.sh:96-121):
+When updating versions in `artifacts/versions.json`, hashes must be converted to SRI format:
 
-1. Download with `nix-prefetch-url` to get base hash
+1. Download with `nix-prefetch-url` to get the base hash
 2. Convert to SRI format with `nix hash to-sri`
-3. Update `package.nix` with the SRI hash (`sha256-...`)
+3. Update `artifacts/versions.json` with the SRI hash (`sha256-...` or `sha512-...`)
 
 **Never** use fake/placeholder hashes - the build will fail and CI won't catch it until runtime.
 
 ### FHS Environment Dependencies
 
-The `targetPkgs` list (package.nix:83-123) includes all libraries Antigravity needs. If adding new dependencies:
+The `targetPkgs` list in `pkgs/package.nix` includes all libraries the GUI apps need. If adding new dependencies:
 
 - Include both the library and its transitive dependencies
 - Add X11 libraries with `xorg.` prefix
@@ -110,24 +120,12 @@ The `targetPkgs` list (package.nix:83-123) includes all libraries Antigravity ne
 The three workflows work together:
 
 1. **update.yml**: Runs daily at 07:00 UTC, creates PRs, enables auto-merge
-2. **release.yml**: Triggers on `package.nix` changes to main, creates GitHub releases
+2. **release.yml**: Triggers on `artifacts/versions.json` changes to main, creates GitHub releases
 3. **cleanup-branches.yml**: Deletes merged `auto-update/*` branches
 
 **Release workflow** (release.yml) only runs when:
-- `package.nix` is modified
-- Version in `flake.nix` changed compared to previous commit
+- `artifacts/versions.json` is modified
 - Release tag doesn't already exist
-
-### Version String Format
-
-Antigravity uses the format: `MAJOR.MINOR.PATCH-BUILD_NUMBER`
-
-Example: `1.11.2-6251250307170304`
-
-This appears in three files:
-- `flake.nix` line 58: metadata for consumers
-- `package.nix` line 36: used in derivation
-- Both must be updated together
 
 ## Testing Checklist
 
@@ -146,8 +144,8 @@ nix flake metadata
 # 4. Check for evaluation errors
 nix flake check
 
-# 5. Test on actual system (if modifying FHS env)
-nix run .#default  # Launch full GUI
+# 5. Test CLI
+nix run .#google-antigravity-cli -- --version
 ```
 
 ## Common Issues
@@ -157,26 +155,16 @@ nix run .#default  # Launch full GUI
 The FHS wrapper sets `CHROME_BIN`/`CHROME_PATH` to a wrapper script, not the actual Chrome binary. If Antigravity can't find Chrome:
 
 1. Verify `google-chrome` is in system packages
-2. Check the wrapper script path in package.nix:44-50
+2. Check the wrapper script path in `pkgs/package.nix`
 3. Test: `CHROME_BIN=/path/to/wrapper /path/to/wrapper --version`
-
-### Version scraping fails
-
-The scraper requires JavaScript rendering. Common failures:
-
-- **"playwright not found"**: Run `npm install -g playwright-chromium`
-- **"executable not found"**: Run `npx playwright install chromium`
-- **Timeout errors**: Increase timeout in scrape-version.js:23 (currently 30s)
-- **No version found**: The page structure changed - update selectors in scrape-version.js:30-53
 
 ### Workflow doesn't create PR
 
 Check GitHub Actions logs. Common causes:
 
 1. Version hasn't changed (intentional - exits cleanly)
-2. Playwright not installed (CI installs it, but check workflow output)
-3. Build failed (hash mismatch or missing dependencies)
-4. Permissions issue (workflow needs `contents: write`)
+2. Build failed (hash mismatch or missing dependencies)
+3. Permissions issue (workflow needs `contents: write`)
 
 ## Updating This Package
 
@@ -186,18 +174,18 @@ The automated workflow handles this. To manually update:
 
 ```bash
 ./scripts/update-version.sh
-# Reviews output, commits if successful
+# Review output, commit if successful
 git push
 ```
 
 ### For Packaging Changes
 
-When modifying `package.nix` or `flake.nix`:
+When modifying `pkgs/*.nix` or `flake.nix`:
 
-1. Test locally with multiple build approaches
+1. Test locally with multiple build approaches (FHS and no-FHS)
 2. Verify the FHS environment includes all necessary libraries
 3. Test with `nix run .#default` on a clean NixOS VM if possible
-4. Check that the desktop entry works (`antigravity` command from launcher)
+4. Check that the desktop entry works (`antigravity-ide` or `antigravity` command)
 
 ### For Workflow Changes
 
