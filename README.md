@@ -26,6 +26,8 @@ Run the Antigravity IDE:
 nix run github:UnbreakableMJ/antigravity-nix#google-antigravity-ide
 ```
 
+`google-antigravity-ide` also includes the CLI binary (`agy`).
+
 Run the CLI tool (`agy`):
 ```bash
 nix run github:UnbreakableMJ/antigravity-nix#google-antigravity-cli
