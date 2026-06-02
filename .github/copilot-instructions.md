@@ -19,7 +19,8 @@
 ├── pkgs/
 │   ├── package.nix              # Shared GUI packaging logic (supports Base App and IDE via `appType` parameter)
 │   ├── google-antigravity2.nix  # Entry point for Antigravity 2.0 (Base App); passes appType = "Antigravity 2.0"
-│   ├── google-antigravity-ide.nix # Entry point for Antigravity IDE; symlinkJoins IDE + CLI
+│   ├── google-antigravity-ide.nix # Entry point for Antigravity IDE (IDE-only)
+│   ├── google-antigravity-ide-with-cli.nix # Optional bundle entry point (IDE + CLI)
 │   └── cli.nix                  # CLI tool (`agy`) derivation
 ├── scripts/
 │   ├── check-version.sh         # Queries Google Cloud Run endpoints to check if a new version is available
@@ -38,8 +39,9 @@
 | Flake output | Description | Binary |
 |---|---|---|
 | `default` / `google-antigravity` | Antigravity 2.0 Base App | `antigravity` |
-| `google-antigravity-ide` | Full IDE (also includes CLI) | `antigravity-ide` |
+| `google-antigravity-ide` | Full IDE (IDE only) | `antigravity-ide` |
 | `google-antigravity-cli` | CLI tool | `agy` |
+| `google-antigravity-ide-with-cli` | IDE + CLI bundle | `antigravity-ide`, `agy` |
 
 Each component supports `x86_64-linux`, `aarch64-linux`, `x86_64-darwin`, and `aarch64-darwin`.
 

@@ -24,6 +24,8 @@
           google-antigravity-no-fhs = pkgs.callPackage ./pkgs/google-antigravity2.nix {useFHS = false;};
           google-antigravity-ide = pkgs.callPackage ./pkgs/google-antigravity-ide.nix {};
           google-antigravity-ide-no-fhs = pkgs.callPackage ./pkgs/google-antigravity-ide.nix {useFHS = false;};
+          google-antigravity-ide-with-cli = pkgs.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {};
+          google-antigravity-ide-with-cli-no-fhs = pkgs.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {useFHS = false;};
           google-antigravity-cli = pkgs.callPackage ./pkgs/cli.nix {};
         };
 
@@ -55,6 +57,8 @@
         google-antigravity-no-fhs = final.callPackage ./pkgs/google-antigravity2.nix {useFHS = false;};
         google-antigravity-ide = final.callPackage ./pkgs/google-antigravity-ide.nix {};
         google-antigravity-ide-no-fhs = final.callPackage ./pkgs/google-antigravity-ide.nix {useFHS = false;};
+        google-antigravity-ide-with-cli = final.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {};
+        google-antigravity-ide-with-cli-no-fhs = final.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {useFHS = false;};
         google-antigravity-cli = final.callPackage ./pkgs/cli.nix {};
       };
     };

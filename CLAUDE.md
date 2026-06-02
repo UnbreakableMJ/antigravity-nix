@@ -15,15 +15,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This flake packages three components:
 
 1. **Antigravity 2.0** (`google-antigravity` / `default`): The base agentic app
-2. **Antigravity IDE** (`google-antigravity-ide`): The full IDE (previously the main package)
+2. **Antigravity IDE** (`google-antigravity-ide`): The full IDE (IDE-only package)
 3. **Antigravity CLI** (`google-antigravity-cli`): The `agy` CLI tool
+4. **IDE + CLI Bundle** (`google-antigravity-ide-with-cli`): Installs both together
 
 ### Package Layout
 
 - `artifacts/versions.json`: Source-of-truth JSON holding resolved URLs and SRI hashes for every component and platform
 - `pkgs/package.nix`: Shared GUI packaging logic (supports both Base App and IDE via `appType` parameter)
 - `pkgs/google-antigravity2.nix`: Entry point for the Base App
-- `pkgs/google-antigravity-ide.nix`: Entry point for the IDE
+- `pkgs/google-antigravity-ide.nix`: Entry point for the IDE (IDE-only)
+- `pkgs/google-antigravity-ide-with-cli.nix`: Entry point for IDE + CLI bundle
 - `pkgs/cli.nix`: CLI package derivation
 
 ### Two-Stage GUI Build Process

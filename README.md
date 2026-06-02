@@ -31,6 +31,11 @@ Run the CLI tool (`agy`):
 nix run github:UnbreakableMJ/antigravity-nix#google-antigravity-cli
 ```
 
+Run IDE + CLI together:
+```bash
+nix run github:UnbreakableMJ/antigravity-nix#google-antigravity-ide-with-cli
+```
+
 ## Installation
 
 ### NixOS Configuration
@@ -54,8 +59,9 @@ Add to your `flake.nix`:
         {
           environment.systemPackages = [
             antigravity-nix.packages.x86_64-linux.default # Base App
-            antigravity-nix.packages.x86_64-linux.google-antigravity-ide # IDE
-            antigravity-nix.packages.x86_64-linux.google-antigravity-cli # CLI
+            antigravity-nix.packages.x86_64-linux.google-antigravity-ide # IDE only
+            antigravity-nix.packages.x86_64-linux.google-antigravity-cli # CLI only (agy)
+            antigravity-nix.packages.x86_64-linux.google-antigravity-ide-with-cli # IDE + CLI together
           ];
         }
       ];
@@ -86,6 +92,7 @@ Add to your `flake.nix`:
             antigravity-nix.packages.x86_64-linux.default
             antigravity-nix.packages.x86_64-linux.google-antigravity-ide
             antigravity-nix.packages.x86_64-linux.google-antigravity-cli
+            antigravity-nix.packages.x86_64-linux.google-antigravity-ide-with-cli
           ];
         }
       ];
@@ -106,6 +113,7 @@ Add to your `flake.nix`:
     google-antigravity
     google-antigravity-ide
     google-antigravity-cli
+    google-antigravity-ide-with-cli
   ];
 }
 ```
