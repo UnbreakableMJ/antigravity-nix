@@ -81,6 +81,11 @@ let
   binaryRelPath = if isIde then "antigravity-ide" else "antigravity";
   desktopIcon = if isIde then "antigravity-ide" else "antigravity";
   startupWMClass = if isIde then "Antigravity IDE" else "Antigravity";
+  metaDescription =
+    if isIde then
+      "Google Antigravity IDE - the VS Code-based IDE fork, distributed via edgedl.me.gvt1.com"
+    else
+      "Google Antigravity 2.0 - standalone Desktop app for agent orchestration (no IDE required), distributed via the antigravity-hub bucket";
 
   isAarch64 = system == "aarch64-linux";
 
@@ -197,7 +202,7 @@ let
   };
 
   meta = with lib; {
-    description = desktopName;
+    description = metaDescription;
     homepage = "https://antigravity.google";
     license = licenses.unfree;
     platforms = platforms.linux ++ platforms.darwin;

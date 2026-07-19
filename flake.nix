@@ -22,11 +22,16 @@
           default = pkgs.callPackage ./pkgs/google-antigravity2.nix {};
           google-antigravity = pkgs.callPackage ./pkgs/google-antigravity2.nix {};
           google-antigravity-no-fhs = pkgs.callPackage ./pkgs/google-antigravity2.nix {useFHS = false;};
+          # Alias matching Google's own "Antigravity 2.0 Desktop app" branding —
+          # same derivation as google-antigravity/default, just discoverable by name.
+          google-antigravity-desktop = pkgs.callPackage ./pkgs/google-antigravity2.nix {};
+          google-antigravity-desktop-no-fhs = pkgs.callPackage ./pkgs/google-antigravity2.nix {useFHS = false;};
           google-antigravity-ide = pkgs.callPackage ./pkgs/google-antigravity-ide.nix {};
           google-antigravity-ide-no-fhs = pkgs.callPackage ./pkgs/google-antigravity-ide.nix {useFHS = false;};
           google-antigravity-ide-with-cli = pkgs.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {};
           google-antigravity-ide-with-cli-no-fhs = pkgs.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {useFHS = false;};
           google-antigravity-cli = pkgs.callPackage ./pkgs/cli.nix {};
+          google-antigravity-sdk = pkgs.python3Packages.callPackage ./pkgs/sdk.nix {};
         };
 
         # Development shell for working on this flake
@@ -55,11 +60,14 @@
       overlays.default = final: prev: {
         google-antigravity = final.callPackage ./pkgs/google-antigravity2.nix {};
         google-antigravity-no-fhs = final.callPackage ./pkgs/google-antigravity2.nix {useFHS = false;};
+        google-antigravity-desktop = final.callPackage ./pkgs/google-antigravity2.nix {};
+        google-antigravity-desktop-no-fhs = final.callPackage ./pkgs/google-antigravity2.nix {useFHS = false;};
         google-antigravity-ide = final.callPackage ./pkgs/google-antigravity-ide.nix {};
         google-antigravity-ide-no-fhs = final.callPackage ./pkgs/google-antigravity-ide.nix {useFHS = false;};
         google-antigravity-ide-with-cli = final.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {};
         google-antigravity-ide-with-cli-no-fhs = final.callPackage ./pkgs/google-antigravity-ide-with-cli.nix {useFHS = false;};
         google-antigravity-cli = final.callPackage ./pkgs/cli.nix {};
+        google-antigravity-sdk = final.python3Packages.callPackage ./pkgs/sdk.nix {};
       };
     };
 }

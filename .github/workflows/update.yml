@@ -64,6 +64,14 @@ jobs:
             exit 1
           fi
 
+      - name: Build Antigravity SDK
+        # The SDK is a pre-1.0 PyPI package with a much higher risk of breaking
+        # upstream changes than the stable Desktop app/CLI/IDE products, so its
+        # daily auto-update is gated on the Nix build actually succeeding —
+        # a failure here stops the workflow before any PR is created/merged.
+        if: steps.update.outputs.has_changes == 'true'
+        run: nix build .#google-antigravity-sdk -L
+
       - name: Create Pull Request
         if: steps.update.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6

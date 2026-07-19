@@ -10,23 +10,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-### Three Components
+### Four Components
 
-This flake packages three components:
+This flake packages four components, matching the four downloads listed on
+`antigravity.google/download` (Desktop app, CLI, IDE, SDK):
 
-1. **Antigravity 2.0** (`google-antigravity` / `default`): The base agentic app
+1. **Antigravity 2.0 / Desktop app** (`google-antigravity` / `default` / `google-antigravity-desktop`): the standalone, agent-orchestration desktop app — no IDE required. `google-antigravity-desktop` is a pure alias of `google-antigravity`/`default` (same derivation), added for discoverability against Google's own branding.
 2. **Antigravity IDE** (`google-antigravity-ide`): The full IDE (IDE-only package)
 3. **Antigravity CLI** (`google-antigravity-cli`): The `agy` CLI tool
 4. **IDE + CLI Bundle** (`google-antigravity-ide-with-cli`): Installs both together
+5. **Antigravity SDK** (`google-antigravity-sdk`, optional): Python library (`pip install google-antigravity`, imported as `google.antigravity`) for building custom Antigravity/Gemini agents. Architecturally distinct from the other three — see below.
+
+**These are four genuinely separate upstream sources**, not variations of one
+artifact:
+
+| Component | Upstream source |
+|---|---|
+| Desktop (`google-antigravity` / `default` / `google-antigravity-desktop`) | `storage.googleapis.com/antigravity-public/antigravity-hub` |
+| IDE (`google-antigravity-ide`) | `edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable` |
+| CLI (`google-antigravity-cli`) | `antigravity-cli-auto-updater-*.run.app` Cloud Run manifest — same endpoint as Google's official `curl \| bash` installer at `antigravity.google/cli/install.sh` |
+| SDK (`google-antigravity-sdk`, optional) | PyPI `google-antigravity` — same project as `github.com/google-antigravity/antigravity-sdk-python` |
+
+Verified directly: the URLs on `antigravity.google/download` for Desktop and
+IDE share the exact same bucket/host as the URLs already pinned in
+`artifacts/versions.json` — only the version number differs (the pinned one
+is simply older, refreshed by the daily auto-update workflow). This is not two
+different packagings of the same thing; each of the four is its own download
+surface, always has been, and this flake packages all four independently.
+
+**No output installs all four together.** Each component is a separate package
+with no bundling beyond `google-antigravity-ide-with-cli` (IDE + CLI only, via
+`symlinkJoin` — see `pkgs/google-antigravity-ide-with-cli.nix`). A consumer must
+list every package they want explicitly in `environment.systemPackages` /
+`home.packages` / wherever the overlay is consumed. The SDK in particular is
+enabled/disabled purely by whether `google-antigravity-sdk` appears in that
+list — there is no internal flag or option gating it.
 
 ### Package Layout
 
 - `artifacts/versions.json`: Source-of-truth JSON holding resolved URLs and SRI hashes for every component and platform
-- `pkgs/package.nix`: Shared GUI packaging logic (supports both Base App and IDE via `appType` parameter)
-- `pkgs/google-antigravity2.nix`: Entry point for the Base App
+- `pkgs/package.nix`: Shared GUI packaging logic (supports both Desktop app and IDE via `appType` parameter)
+- `pkgs/google-antigravity2.nix`: Entry point for the Desktop app (`appType = "Antigravity 2.0"`)
 - `pkgs/google-antigravity-ide.nix`: Entry point for the IDE (IDE-only)
 - `pkgs/google-antigravity-ide-with-cli.nix`: Entry point for IDE + CLI bundle
 - `pkgs/cli.nix`: CLI package derivation
+- `pkgs/sdk.nix`: SDK package derivation — a `python3Packages.buildPythonPackage` (`format = "wheel"`) wrapping a prebuilt PyPI wheel, **not** built from `pkgs/package.nix`'s GUI logic. Its `callPackage` must go through `pkgs.python3Packages.callPackage`, not `pkgs.callPackage`, since `buildPythonPackage` lives in that scope.
 
 ### Two-Stage GUI Build Process
 
@@ -52,6 +80,17 @@ The update workflow uses API requests (via `curl` and `jq`) to Google Cloud Run 
 
 **Important**: Web scraping via Playwright has been completely removed in favor of direct API interaction.
 
+**SDK is the exception**: the Antigravity SDK ships only via PyPI, not one of Google's
+Cloud Run auto-updater endpoints, so both scripts query `https://pypi.org/pypi/google-antigravity/json`
+directly for it instead — a separate, bespoke block in each script (same reasoning
+that already gives Antigravity CLI its own bespoke block in `update-version.sh`,
+since its manifest shape also differs from the Base App/IDE "releases" JSON).
+PyPI exposes each wheel's `sha256` digest directly, so no `nix-prefetch-url` step
+is needed for it, just a hex→SRI conversion via `nix hash convert`. There is
+currently no `x86_64-darwin` (Intel Mac) wheel published upstream at all, so that
+platform is simply absent from `versions.json`'s `"Antigravity SDK"` entry and
+`pkgs/sdk.nix` throws a clear error for it.
+
 ## Common Commands
 
 ### Building and Testing
@@ -68,6 +107,9 @@ nix flake check
 
 # Build the CLI
 nix build .#google-antigravity-cli
+
+# Build the optional SDK (Python package, x86_64-linux / aarch64-linux / aarch64-darwin only)
+nix build .#google-antigravity-sdk
 ```
 
 ### Version Management
@@ -179,6 +221,12 @@ The automated workflow handles this. To manually update:
 # Review output, commit if successful
 git push
 ```
+
+The SDK (pre-1.0, currently `0.1.7`) is auto-updated the same as the other
+components, but since it's higher-risk than the stable GUI/CLI/IDE products,
+`nix build .#google-antigravity-sdk` must succeed before its update PR is
+created/auto-merged — verify this build-gate is wired into `update.yml` when
+touching that workflow.
 
 ### For Packaging Changes
 

@@ -61,3 +61,25 @@ echo ""
 check_app "Antigravity 2.0" "https://antigravity-auto-updater-974169037036.us-central1.run.app/releases"
 check_app "Antigravity CLI" "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json"
 check_app "Antigravity IDE" "https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases"
+
+# SDK is distributed only via PyPI (pip install google-antigravity), not one of
+# Google's Cloud Run auto-updater endpoints, so it needs its own check block.
+echo "--- Antigravity SDK ---"
+current_url=$(jq -r '."Antigravity SDK"."x86_64-linux".url' "$VERSIONS_JSON" 2>/dev/null || echo "")
+current=$(echo "$current_url" | grep -oP 'google_antigravity-\K[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+echo -e "Current version: $current"
+
+latest=$(curl -sL "https://pypi.org/pypi/google-antigravity/json" | jq -r '.info.version' 2>/dev/null || echo "")
+
+if [[ -n "$latest" && "$latest" != "null" ]]; then
+echo -e "Latest version:  $latest"
+
+if [[ "$current" == "$latest" ]]; then
+echo -e "${GREEN}✓ Already at latest version!${NC}"
+else
+echo -e "${YELLOW}⚠ Update available!${NC}"
+fi
+else
+echo -e "${RED}Error: Could not parse version from PyPI API${NC}"
+fi
+echo ""

@@ -104,6 +104,79 @@ process_app() {
 process_app "Antigravity 2.0" "$APP_VER" "https://storage.googleapis.com/antigravity-public/antigravity-hub" ""
 process_app "Antigravity IDE" "$IDE_VER" "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable" "true"
 
+# Antigravity SDK is distributed only via PyPI (pip install google-antigravity),
+# not one of Google's Cloud Run auto-updater endpoints, so it needs its own
+# bespoke block (closest existing analog is the CLI block below: the manifest
+# already exposes a hash directly, so no nix-prefetch-url is needed here either).
+# NOTE: placed before the CLI section on purpose, since CLI has an early
+# `exit 0` below when it's already up to date, which would otherwise skip this.
+log_info "Fetching Antigravity SDK latest version from PyPI..."
+SDK_JSON=$(curl -sL "https://pypi.org/pypi/google-antigravity/json" || echo "")
+SDK_LATEST_VER=$(echo "$SDK_JSON" | jq -r '.info.version' 2>/dev/null || echo "")
+
+if [[ -z "$SDK_LATEST_VER" || "$SDK_LATEST_VER" == "null" ]]; then
+    log_error "Failed to fetch Antigravity SDK version from PyPI"
+    exit 1
+fi
+
+SDK_CURRENT_URL=$(jq -r '."Antigravity SDK"."x86_64-linux".url' "$OUTPUT_JSON" 2>/dev/null || echo "null")
+SDK_UP_TO_DATE=false
+if [[ "$SDK_CURRENT_URL" != "null" ]]; then
+    SDK_CURRENT_VER=$(echo "$SDK_CURRENT_URL" | grep -oP 'google_antigravity-\K[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    if [[ "$SDK_CURRENT_VER" == "$SDK_LATEST_VER" ]]; then
+        SDK_UP_TO_DATE=true
+    fi
+fi
+
+if [[ "$SDK_UP_TO_DATE" == "true" ]]; then
+    log_info "Antigravity SDK is already at latest version ($SDK_LATEST_VER). Skipping..."
+else
+    log_info "Updating Antigravity SDK to $SDK_LATEST_VER..."
+
+    # Map PyPI wheel platform tags to Nix systems. win_amd64/win_arm64 have no
+    # matching Nix system (expected, not an error). There is currently no
+    # x86_64-darwin (Intel Mac) wheel published at all, so that platform stays
+    # absent from versions.json and pkgs/sdk.nix throws a clear error for it.
+    sdk_payload="{}"
+    sdk_matched=0
+
+    while IFS=$'\t' read -r plat_tag file_url sha256_hex; do
+        case "$plat_tag" in
+            manylinux*_x86_64) nix_os="x86_64-linux" ;;
+            manylinux*_aarch64) nix_os="aarch64-linux" ;;
+            macosx*_arm64) nix_os="aarch64-darwin" ;;
+            macosx*_x86_64) nix_os="x86_64-darwin" ;;
+            win_amd64|win_arm64)
+                log_info "Skipping SDK wheel for $plat_tag (no matching Nix system)"
+                continue
+                ;;
+            *)
+                log_info "Skipping unrecognized Antigravity SDK wheel platform tag: $plat_tag"
+                continue
+                ;;
+        esac
+
+        sri_hash=$(to_sri "$sha256_hex")
+        if [[ -z "$sri_hash" ]]; then
+            log_error "Failed to convert Antigravity SDK hash for $plat_tag"
+            exit 1
+        fi
+
+        sdk_payload=$(echo "$sdk_payload" | jq --arg plat "$nix_os" --arg url "$file_url" --arg hash "$sri_hash" \
+            '.[$plat] = {url: $url, hash: $hash}')
+        sdk_matched=$((sdk_matched + 1))
+    done < <(echo "$SDK_JSON" | jq -r '.urls[] | select(.packagetype=="bdist_wheel") | [(.filename | capture("py3-none-(?<tag>.+)\\.whl").tag), .url, .digests.sha256] | @tsv')
+
+    if [[ "$sdk_matched" -eq 0 ]]; then
+        log_error "No usable Antigravity SDK wheels found for any supported Nix system"
+        exit 1
+    fi
+
+    tmp_json=$(mktemp)
+    jq --argjson payload "$sdk_payload" '.["Antigravity SDK"] = $payload' "$OUTPUT_JSON" > "$tmp_json"
+    mv "$tmp_json" "$OUTPUT_JSON"
+fi
+
 log_info "Fetching CLI latest versions..."
 
 # Get CLI latest version to check if we can skip

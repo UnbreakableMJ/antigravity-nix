@@ -21,7 +21,8 @@
 │   ├── google-antigravity2.nix  # Entry point for Antigravity 2.0 (Base App); passes appType = "Antigravity 2.0"
 │   ├── google-antigravity-ide.nix # Entry point for Antigravity IDE (IDE-only)
 │   ├── google-antigravity-ide-with-cli.nix # Optional bundle entry point (IDE + CLI)
-│   └── cli.nix                  # CLI tool (`agy`) derivation
+│   ├── cli.nix                  # CLI tool (`agy`) derivation
+│   └── sdk.nix                  # Optional SDK derivation (PyPI wheel, python3Packages.buildPythonPackage)
 ├── scripts/
 │   ├── check-version.sh         # Queries Google Cloud Run endpoints to check if a new version is available
 │   └── update-version.sh        # Full update: fetches latest URLs, downloads, computes SRI hashes, updates versions.json
@@ -34,16 +35,17 @@
 
 ---
 
-## Three Packaged Components
+## Four Packaged Components
 
 | Flake output | Description | Binary |
 |---|---|---|
-| `default` / `google-antigravity` | Antigravity 2.0 Base App | `antigravity` |
+| `default` / `google-antigravity` / `google-antigravity-desktop` | Antigravity 2.0 Desktop app (standalone alias set, same derivation) | `antigravity` |
 | `google-antigravity-ide` | Full IDE (IDE only) | `antigravity-ide` |
 | `google-antigravity-cli` | CLI tool | `agy` |
 | `google-antigravity-ide-with-cli` | IDE + CLI bundle | `antigravity-ide`, `agy` |
+| `google-antigravity-sdk` (optional) | Python SDK (`pip install google-antigravity`) | n/a — library, `import google.antigravity` |
 
-Each component supports `x86_64-linux`, `aarch64-linux`, `x86_64-darwin`, and `aarch64-darwin`.
+Desktop/IDE/CLI support `x86_64-linux`, `aarch64-linux`, `x86_64-darwin`, and `aarch64-darwin`. The SDK supports only `x86_64-linux`, `aarch64-linux`, and `aarch64-darwin` — no `x86_64-darwin` wheel is published upstream.
 
 ---
 
@@ -70,6 +72,8 @@ On macOS, a simpler `stdenv.mkDerivation` using `undmg` extracts the `.dmg` and 
 
 **Hash format**: Always use SRI format (`sha256-...` or `sha512-...`). Never use bare hex hashes or placeholder values.
 
+**SDK exception**: the SDK is sourced from `https://pypi.org/pypi/google-antigravity/json`, not a Cloud Run endpoint — both scripts have a separate bespoke block for it (PyPI already exposes each wheel's `sha256` digest directly, so no `nix-prefetch-url` step is needed there, just hex→SRI conversion).
+
 ---
 
 ## Coding Conventions
@@ -89,7 +93,7 @@ On macOS, a simpler `stdenv.mkDerivation` using `undmg` extracts the `.dmg` and 
 - API communication uses `curl` + `jq`; no Playwright or browser automation.
 
 ### versions.json
-- Top-level keys are human-readable component names: `"Antigravity 2.0"`, `"Antigravity IDE"`, `"Antigravity CLI"`.
+- Top-level keys are human-readable component names: `"Antigravity 2.0"`, `"Antigravity IDE"`, `"Antigravity CLI"`, `"Antigravity SDK"`.
 - Platform keys match Nix system strings: `"x86_64-linux"`, `"aarch64-linux"`, `"x86_64-darwin"`, `"aarch64-darwin"`.
 - Each entry has exactly two fields: `"url"` and `"hash"`.
 
@@ -113,6 +117,9 @@ nix build .#google-antigravity-ide
 
 # Build the CLI
 nix build .#google-antigravity-cli
+
+# Build the optional SDK (Python package)
+nix build .#google-antigravity-sdk
 
 # Build the no-FHS variant
 nix build .#google-antigravity-no-fhs
