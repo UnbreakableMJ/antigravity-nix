@@ -41,6 +41,42 @@ to_sri() {
     fi
 }
 
+# Extracts the bare "X.Y.Z" semver prefix from a version string that may carry
+# a trailing "-<build/execution id>" suffix (e.g. "2.0.0-6324554176528384").
+semver_only() {
+    echo "$1" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+' || echo ""
+}
+
+# Returns 0 (true) if dotted version $1 is strictly less than dotted version $2.
+version_lt() {
+    local v1=$1 v2=$2
+    [[ "$v1" == "$v2" ]] && return 1
+    local IFS=.
+    local -a a=($v1) b=($v2)
+    for i in 0 1 2; do
+        local ai=${a[i]:-0} bi=${b[i]:-0}
+        if (( ai < bi )); then return 0; fi
+        if (( ai > bi )); then return 1; fi
+    done
+    return 1
+}
+
+# Guards against silently downgrading a pin when an upstream "latest version"
+# API reports a version older than what's already pinned. Discovered in
+# practice: Google's Cloud Run releases endpoint for the Desktop app ("Antigravity
+# 2.0") reported a stale 2.0.0 as latest days after 2.3.1 was already live in
+# the real bucket and linked from antigravity.google/download, which caused the
+# naive "not equal -> update" logic below to overwrite a correct, newer pin with
+# stale data. Applied to every component for defense-in-depth against the same
+# failure mode recurring elsewhere.
+is_downgrade() {
+    local current_full="$1" latest_full="$2"
+    local current_semver=$(semver_only "$current_full")
+    local latest_semver=$(semver_only "$latest_full")
+    [[ -z "$current_semver" || -z "$latest_semver" ]] && return 1
+    version_lt "$latest_semver" "$current_semver"
+}
+
 process_app() {
     local name="$1"
     local version="$2"
@@ -53,6 +89,10 @@ process_app() {
         local current_version=$(echo "$current_url" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+-[0-9]+' || echo "unknown")
         if [[ "$current_version" == "$version" ]]; then
             log_info "$name is already at latest version ($version). Skipping download..."
+            return 0
+        fi
+        if is_downgrade "$current_version" "$version"; then
+            log_info "⚠ $name: upstream releases API reports $version, which is OLDER than the currently pinned $current_version — likely stale upstream metadata. Refusing to downgrade; keeping $current_version."
             return 0
         fi
     fi
@@ -125,11 +165,14 @@ if [[ "$SDK_CURRENT_URL" != "null" ]]; then
     SDK_CURRENT_VER=$(echo "$SDK_CURRENT_URL" | grep -oP 'google_antigravity-\K[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
     if [[ "$SDK_CURRENT_VER" == "$SDK_LATEST_VER" ]]; then
         SDK_UP_TO_DATE=true
+    elif is_downgrade "$SDK_CURRENT_VER" "$SDK_LATEST_VER"; then
+        log_info "⚠ Antigravity SDK: PyPI reports $SDK_LATEST_VER, which is OLDER than the currently pinned $SDK_CURRENT_VER — likely a stale/cached PyPI response. Refusing to downgrade; keeping $SDK_CURRENT_VER."
+        SDK_UP_TO_DATE=true
     fi
 fi
 
 if [[ "$SDK_UP_TO_DATE" == "true" ]]; then
-    log_info "Antigravity SDK is already at latest version ($SDK_LATEST_VER). Skipping..."
+    log_info "Antigravity SDK is already at latest version ($SDK_CURRENT_VER). Skipping..."
 else
     log_info "Updating Antigravity SDK to $SDK_LATEST_VER..."
 
@@ -189,6 +232,11 @@ if [[ -n "$CLI_LATEST_VER" ]]; then
         CLI_CURRENT_VER=$(echo "$CLI_CURRENT_URL" | grep -oP 'antigravity-cli/\K[0-9.]+-[0-9]+' || echo "unknown")
         if [[ "$CLI_CURRENT_VER" == "$CLI_LATEST_VER" ]]; then
             log_info "Antigravity CLI is already at latest version ($CLI_LATEST_VER). Skipping download..."
+            log_info "Done! $OUTPUT_JSON is up to date."
+            exit 0
+        fi
+        if is_downgrade "$CLI_CURRENT_VER" "$CLI_LATEST_VER"; then
+            log_info "⚠ Antigravity CLI: manifest reports $CLI_LATEST_VER, which is OLDER than the currently pinned $CLI_CURRENT_VER — likely stale upstream metadata. Refusing to downgrade; keeping $CLI_CURRENT_VER."
             log_info "Done! $OUTPUT_JSON is up to date."
             exit 0
         fi

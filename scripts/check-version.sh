@@ -20,6 +20,36 @@ if [[ ! -f "$VERSIONS_JSON" ]]; then
     exit 1
 fi
 
+# Extracts the bare "X.Y.Z" semver prefix from a version string that may carry
+# a trailing "-<build/execution id>" suffix.
+semver_only() {
+    echo "$1" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+' || echo ""
+}
+
+# Returns 0 (true) if dotted version $1 is strictly less than dotted version $2.
+version_lt() {
+    local v1=$1 v2=$2
+    [[ "$v1" == "$v2" ]] && return 1
+    local IFS=.
+    local -a a=($v1) b=($v2)
+    for i in 0 1 2; do
+        local ai=${a[i]:-0} bi=${b[i]:-0}
+        if (( ai < bi )); then return 0; fi
+        if (( ai > bi )); then return 1; fi
+    done
+    return 1
+}
+
+# Mirrors update-version.sh's is_downgrade guard, purely for accurate reporting
+# here — this script never writes versions.json. Discovered in practice:
+# Google's Cloud Run releases endpoint for the Desktop app reported a stale
+# older version days after a newer one was already live upstream.
+is_downgrade() {
+    local current_semver=$(semver_only "$1") latest_semver=$(semver_only "$2")
+    [[ -z "$current_semver" || -z "$latest_semver" ]] && return 1
+    version_lt "$latest_semver" "$current_semver"
+}
+
 check_app() {
 local name="$1"
 local url="$2"
@@ -49,6 +79,8 @@ echo -e "Latest version:  $latest"
 
 if [[ "$current" == "$latest" ]]; then
 echo -e "${GREEN}✓ Already at latest version!${NC}"
+elif is_downgrade "$current" "$latest"; then
+echo -e "${YELLOW}⚠ API reports an OLDER version than pinned — likely stale upstream metadata, not a real downgrade. Ignoring.${NC}"
 else
 echo -e "${YELLOW}⚠ Update available!${NC}"
 fi
@@ -76,6 +108,8 @@ echo -e "Latest version:  $latest"
 
 if [[ "$current" == "$latest" ]]; then
 echo -e "${GREEN}✓ Already at latest version!${NC}"
+elif is_downgrade "$current" "$latest"; then
+echo -e "${YELLOW}⚠ PyPI reports an OLDER version than pinned — likely a stale/cached response, not a real downgrade. Ignoring.${NC}"
 else
 echo -e "${YELLOW}⚠ Update available!${NC}"
 fi
