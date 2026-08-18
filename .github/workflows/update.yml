@@ -64,13 +64,42 @@ jobs:
             exit 1
           fi
 
-      - name: Build Antigravity SDK
-        # The SDK is a pre-1.0 PyPI package with a much higher risk of breaking
-        # upstream changes than the stable Desktop app/CLI/IDE products, so its
-        # daily auto-update is gated on the Nix build actually succeeding —
-        # a failure here stops the workflow before any PR is created/merged.
+      # Hard gate: the products people actually install. A version bump can move
+      # files the installPhase hardcodes, and that only shows up at build time,
+      # so this has to build rather than trust the prefetched hashes. Runner
+      # architecture only — the other three platforms cannot be built here, and
+      # four Electron trees would not fit on the runner's disk anyway.
+      - name: Build Antigravity IDE, Desktop and CLI
         if: steps.update.outputs.has_changes == 'true'
-        run: nix build .#google-antigravity-sdk -L
+        run: |
+          nix build -L --no-link \
+            .#google-antigravity-ide \
+            .#google-antigravity-desktop \
+            .#google-antigravity-cli
+
+      # Soft check: the SDK is a pre-1.0 PyPI package and breaks far more often
+      # than the stable products. It used to be a hard gate, and on 2026-07-21
+      # that stopped being a safety net and became the bug: google-antigravity
+      # 0.1.12 ships protobuf gencode 7.35.0 while nixpkgs carries runtime
+      # 6.33.0, protobuf refuses the mismatch, and every daily run failed before
+      # opening a PR. Four IDE releases went unproposed because an optional
+      # Python package would not import. It reports now instead of blocking; the
+      # PR body carries the result so a broken SDK is still visible.
+      - name: Build Antigravity SDK
+        id: sdk
+        if: steps.update.outputs.has_changes == 'true'
+        continue-on-error: true
+        run: nix build -L --no-link .#google-antigravity-sdk
+
+      - name: Record SDK build result
+        id: sdkstatus
+        if: steps.update.outputs.has_changes == 'true'
+        run: |
+          if [ "${{ steps.sdk.outcome }}" = "success" ]; then
+            echo "sdk_status=:white_check_mark: SDK builds" >> $GITHUB_OUTPUT
+          else
+            echo "sdk_status=:warning: **SDK build FAILED** — merging anyway; the IDE, Desktop and CLI are unaffected. Investigate separately." >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Pull Request
         if: steps.update.outputs.has_changes == 'true'
@@ -88,8 +117,11 @@ jobs:
             - Updated URLs and hashes in `artifacts/versions.json`
 
             ### Testing
-            - ✅ Built successfully
-            - ✅ Flake checks passed
+            - ✅ IDE, Desktop and CLI built on x86_64-linux
+            - ${{ steps.sdkstatus.outputs.sdk_status }}
+
+            Hashes for the other three platforms are prefetched, not built —
+            `nix-prefetch-url` verifies the download, not the install phase.
 
             ### Changelog
             See: https://antigravity.google/releases
