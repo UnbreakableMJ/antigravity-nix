@@ -69,12 +69,37 @@ version_lt() {
 # naive "not equal -> update" logic below to overwrite a correct, newer pin with
 # stale data. Applied to every component for defense-in-depth against the same
 # failure mode recurring elsewhere.
+# Extracts the trailing "-<build/execution id>" as a bare number, or "" if the
+# version string carries none.
+build_id() {
+    echo "$1" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+-\K[0-9]+' || echo ""
+}
+
 is_downgrade() {
     local current_full="$1" latest_full="$2"
     local current_semver=$(semver_only "$current_full")
     local latest_semver=$(semver_only "$latest_full")
     [[ -z "$current_semver" || -z "$latest_semver" ]] && return 1
-    version_lt "$latest_semver" "$current_semver"
+    version_lt "$latest_semver" "$current_semver" || return 1
+
+    # The semver went backwards -- but that alone does not mean the response is
+    # stale, because a product can legitimately renumber its line downward. The
+    # Desktop app did exactly that: its releases run 1.11.x -> 1.23.2 -> 2.0.0,
+    # and nothing on that endpoint has ever reported 2.3.1. Comparing semver
+    # alone, this guard read every real 2.0.0 release as stale metadata and
+    # refused it, holding the pin on a build that is not on the release list at
+    # all -- silently, on every run, for as long as the pin stood.
+    #
+    # The execution id is the signal that actually distinguishes the two cases:
+    # it is a monotonic build counter, so a genuinely stale response reports an
+    # OLDER one, while a renumbering reports a NEWER one. Trust it over semver
+    # whenever both are present.
+    local current_build=$(build_id "$current_full")
+    local latest_build=$(build_id "$latest_full")
+    if [[ -n "$current_build" && -n "$latest_build" ]] && (( latest_build > current_build )); then
+        return 1
+    fi
+    return 0
 }
 
 process_app() {

@@ -44,10 +44,23 @@ version_lt() {
 # here — this script never writes versions.json. Discovered in practice:
 # Google's Cloud Run releases endpoint for the Desktop app reported a stale
 # older version days after a newer one was already live upstream.
+# Extracts the trailing "-<build/execution id>" as a bare number, or "" if the
+# version string carries none.
+build_id() {
+    echo "$1" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+-\K[0-9]+' || echo ""
+}
+
+# Mirrors update-version.sh's guard exactly, including the build-id tiebreak --
+# see the long comment there for why semver alone is not sufficient.
 is_downgrade() {
     local current_semver=$(semver_only "$1") latest_semver=$(semver_only "$2")
     [[ -z "$current_semver" || -z "$latest_semver" ]] && return 1
-    version_lt "$latest_semver" "$current_semver"
+    version_lt "$latest_semver" "$current_semver" || return 1
+    local current_build=$(build_id "$1") latest_build=$(build_id "$2")
+    if [[ -n "$current_build" && -n "$latest_build" ]] && (( latest_build > current_build )); then
+        return 1
+    fi
+    return 0
 }
 
 check_app() {
