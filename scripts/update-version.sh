@@ -15,11 +15,35 @@ if [[ ! -f "$OUTPUT_JSON" ]]; then
     echo "{}" > "$OUTPUT_JSON"
 fi
 
+# The Desktop app's version comes from the DOWNLOAD PAGE, not from its
+# auto-updater endpoint.
+#
+# That endpoint is not merely occasionally stale — it has been serving a build
+# from 2026-05-19 while the page linked 2.3.1 (2026-07-16) and then 2.8.1
+# (2026-08-13). Trusting it once already downgraded this pin by two releases,
+# and the is_downgrade guard is what caught it. Consulting the page removes the
+# need for the guard to catch it at all: the page links the artifacts users
+# actually get, in the same antigravity-hub bucket this file pins.
+#
+# Note the execution id is NOT a recency signal and must not be used as one:
+# the stale 2.0.0 carries 6324554176528384 while the newer 2.3.1 carries
+# 5358163105546240. Compare semver, or compare nothing.
+DOWNLOAD_PAGE="https://antigravity.google/download"
+
+fetch_app_version_from_page() {
+    # --compressed because the page is served brotli/gzip; without it the body
+    # is binary and every grep silently finds nothing.
+    curl -sL --compressed --max-time 30 "$DOWNLOAD_PAGE" \
+        | grep -oE 'antigravity-hub/[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/' \
+        | head -1 \
+        | sed 's|antigravity-hub/||; s|/$||'
+}
+
 log_info "Fetching IDE/App latest versions..."
-APP_VER=$(curl -sL "https://antigravity-auto-updater-974169037036.us-central1.run.app/releases" | jq -r '.[0] | .version + "-" + .execution_id')
+APP_VER=$(fetch_app_version_from_page)
 IDE_VER=$(curl -sL "https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases" | jq -r '.[0] | .version + "-" + .execution_id')
 
-if [[ -z "$APP_VER" || "$APP_VER" == "null-null" ]]; then log_error "Failed to fetch App version"; exit 1; fi
+if [[ -z "$APP_VER" ]]; then log_error "Failed to read the App version from $DOWNLOAD_PAGE"; exit 1; fi
 if [[ -z "$IDE_VER" || "$IDE_VER" == "null-null" ]]; then log_error "Failed to fetch IDE version"; exit 1; fi
 
 get_hash() {
@@ -69,37 +93,12 @@ version_lt() {
 # naive "not equal -> update" logic below to overwrite a correct, newer pin with
 # stale data. Applied to every component for defense-in-depth against the same
 # failure mode recurring elsewhere.
-# Extracts the trailing "-<build/execution id>" as a bare number, or "" if the
-# version string carries none.
-build_id() {
-    echo "$1" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+-\K[0-9]+' || echo ""
-}
-
 is_downgrade() {
     local current_full="$1" latest_full="$2"
     local current_semver=$(semver_only "$current_full")
     local latest_semver=$(semver_only "$latest_full")
     [[ -z "$current_semver" || -z "$latest_semver" ]] && return 1
-    version_lt "$latest_semver" "$current_semver" || return 1
-
-    # The semver went backwards -- but that alone does not mean the response is
-    # stale, because a product can legitimately renumber its line downward. The
-    # Desktop app did exactly that: its releases run 1.11.x -> 1.23.2 -> 2.0.0,
-    # and nothing on that endpoint has ever reported 2.3.1. Comparing semver
-    # alone, this guard read every real 2.0.0 release as stale metadata and
-    # refused it, holding the pin on a build that is not on the release list at
-    # all -- silently, on every run, for as long as the pin stood.
-    #
-    # The execution id is the signal that actually distinguishes the two cases:
-    # it is a monotonic build counter, so a genuinely stale response reports an
-    # OLDER one, while a renumbering reports a NEWER one. Trust it over semver
-    # whenever both are present.
-    local current_build=$(build_id "$current_full")
-    local latest_build=$(build_id "$latest_full")
-    if [[ -n "$current_build" && -n "$latest_build" ]] && (( latest_build > current_build )); then
-        return 1
-    fi
-    return 0
+    version_lt "$latest_semver" "$current_semver"
 }
 
 process_app() {
