@@ -31,6 +31,50 @@ artifact:
 | CLI (`google-antigravity-cli`) | `antigravity-cli-auto-updater-*.run.app` Cloud Run manifest — same endpoint as Google's official `curl \| bash` installer at `antigravity.google/cli/install.sh` |
 | SDK (`google-antigravity-sdk`, optional) | PyPI `google-antigravity` — same project as `github.com/google-antigravity/antigravity-sdk-python` |
 
+## The version source of truth is the download page
+
+**`https://antigravity.google/download` is authoritative. Check it every time
+this repo is touched, and always before updating a pin.**
+
+The Cloud Run `/releases` endpoints are convenient but not trustworthy. The
+Desktop one served a **2026-05-19** build for months while the page linked
+2.3.1 (2026-07-16) and then 2.8.1 (2026-08-13). Trusting it once downgraded
+this flake's Desktop pin by two releases. `scripts/update-version.sh` therefore
+resolves the Desktop version by scraping the page, not by querying that
+endpoint.
+
+Read the page correctly — it carries two different kinds of number, and only
+one of them is evidence:
+
+| On the page | Meaning | Trust for pinning? |
+|---|---|---|
+| A `storage.googleapis.com/...` or `edgedl...` **artifact URL** | the file users actually download | **Yes** |
+| A `v1.2.3` label linking to `/changelog?tab=...` | marketing/changelog copy, can lag the shipped artifact by a day or more | **No** |
+
+The CLI is exactly that trap: the page shows `v1.1.14` as a changelog link and
+links **no CLI artifact at all**, while the CLI manifest endpoint serves a real
+1.1.15 URL. Checked against `Last-Modified`, 1.1.15 (2026-08-19) is genuinely
+newer than 1.1.14 (2026-08-18), so for the CLI the endpoint is right and the
+page's number is not a download reference. Per-component sources stay as the
+table above says.
+
+**`Last-Modified` on the artifact settles any disagreement.** It is the only
+signal here that actually orders builds:
+
+```sh
+curl -sI "https://storage.googleapis.com/antigravity-public/antigravity-hub/<ver>/linux-x64/Antigravity.tar.gz" \
+  | grep -i '^last-modified'
+```
+
+**The execution id is NOT a recency signal.** It looks like a monotonic build
+counter and is not one. Counter-example from this repo's own history: Desktop
+`2.0.0-6324554176528384` has a *higher* id than `2.3.1-5358163105546240` and
+was built two months *earlier*. Compare semver, or compare `Last-Modified` —
+never the id.
+
+Fetching the page needs `curl --compressed`: it is served brotli/gzip, and
+without that flag the body is binary and every `grep` silently finds nothing.
+
 Verified directly: the URLs on `antigravity.google/download` for Desktop and
 IDE share the exact same bucket/host as the URLs already pinned in
 `artifacts/versions.json` — only the version number differs (the pinned one
