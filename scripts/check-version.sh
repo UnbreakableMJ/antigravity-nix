@@ -44,23 +44,22 @@ version_lt() {
 # here — this script never writes versions.json. Discovered in practice:
 # Google's Cloud Run releases endpoint for the Desktop app reported a stale
 # older version days after a newer one was already live upstream.
-# Extracts the trailing "-<build/execution id>" as a bare number, or "" if the
-# version string carries none.
-build_id() {
-    echo "$1" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+-\K[0-9]+' || echo ""
-}
-
-# Mirrors update-version.sh's guard exactly, including the build-id tiebreak --
-# see the long comment there for why semver alone is not sufficient.
 is_downgrade() {
     local current_semver=$(semver_only "$1") latest_semver=$(semver_only "$2")
     [[ -z "$current_semver" || -z "$latest_semver" ]] && return 1
-    version_lt "$latest_semver" "$current_semver" || return 1
-    local current_build=$(build_id "$1") latest_build=$(build_id "$2")
-    if [[ -n "$current_build" && -n "$latest_build" ]] && (( latest_build > current_build )); then
-        return 1
-    fi
-    return 0
+    version_lt "$latest_semver" "$current_semver"
+}
+
+# Mirrors update-version.sh: the Desktop app's version comes from the download
+# page, not its auto-updater endpoint, which has served a 2026-05-19 build for
+# months. See the long comment there.
+DOWNLOAD_PAGE="https://antigravity.google/download"
+
+fetch_app_version_from_page() {
+    curl -sL --compressed --max-time 30 "$DOWNLOAD_PAGE" \
+        | grep -oE 'antigravity-hub/[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/' \
+        | head -1 \
+        | sed 's|antigravity-hub/||; s|/$||'
 }
 
 check_app() {
@@ -81,7 +80,9 @@ fi
 echo -e "Current version: $current"
 
 local latest
-if [[ "$name" == "Antigravity CLI" ]]; then
+if [[ "$name" == "Antigravity 2.0" ]]; then
+latest=$(fetch_app_version_from_page)
+elif [[ "$name" == "Antigravity CLI" ]]; then
 latest=$(curl -sL "$url" | jq -r '.url | match("antigravity-cli/([0-9.]+-[0-9]+)/").captures[0].string' 2>/dev/null || echo "")
 else
 latest=$(curl -sL "$url" | jq -r '.[0] | .version + "-" + .execution_id' 2>/dev/null || echo "")
