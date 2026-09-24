@@ -198,6 +198,15 @@ antigravity-ide              # launch Antigravity IDE
 agy                          # use the Antigravity CLI
 ```
 
+`antigravity-ide` is the IDE's own VS Code-style command-line script, so the
+usual extension commands work without opening a window:
+
+```bash
+antigravity-ide --install-extension publisher.name   # from Open VSX
+antigravity-ide --install-extension ./some.vsix
+antigravity-ide --list-extensions --show-versions
+```
+
 ## Version Pinning
 
 ```nix
