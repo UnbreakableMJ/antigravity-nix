@@ -79,6 +79,12 @@ let
   pname = if isIde then "google-antigravity-ide" else "google-antigravity2";
   desktopName = if isIde then "Google Antigravity IDE" else "Google Antigravity";
   binaryRelPath = if isIde then "antigravity-ide" else "antigravity";
+  # The IDE ships VS Code's CLI script, which runs cli.js under
+  # ELECTRON_RUN_AS_NODE: it handles --install-extension, --list-extensions,
+  # --version and the like, and launches the GUI for everything else.
+  # Exec'ing the Electron binary directly turns every CLI call into a GUI
+  # launch. Antigravity 2.0 is not a VS Code fork and ships no such script.
+  entryRelPath = if isIde then "bin/antigravity-ide" else binaryRelPath;
   desktopIcon = if isIde then "antigravity-ide" else "antigravity";
   startupWMClass = if isIde then "Antigravity IDE" else "Antigravity";
   metaDescription =
@@ -299,7 +305,7 @@ let
       export CHROME_BIN=${chrome-wrapper}
       export CHROME_PATH=${chrome-wrapper}
 
-      exec ${antigravity-unwrapped}/lib/${pname}/${binaryRelPath} ${lib.optionalString isIde "--user-data-dir=$HOME/.antigravity-ide"} "$@"
+      exec ${antigravity-unwrapped}/lib/${pname}/${entryRelPath} ${lib.optionalString isIde "--user-data-dir=$HOME/.antigravity-ide"} "$@"
     '';
 
     inherit meta;
@@ -431,7 +437,7 @@ let
 
       mkdir -p $out/bin
       makeWrapper $out/lib/${pname}/launcher.sh $out/bin/${desktopIcon} \
-        --add-flags $out/lib/${pname}/${binaryRelPath} \
+        --add-flags $out/lib/${pname}/${entryRelPath} \
         --set CHROME_BIN ${chrome-wrapper} \
         --set CHROME_PATH ${chrome-wrapper} \
         --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath dlopenLibs}" \
