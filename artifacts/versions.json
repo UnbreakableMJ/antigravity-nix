@@ -55,20 +55,20 @@
   },
   "Antigravity SDK": {
     "aarch64-darwin": {
-      "url": "https://files.pythonhosted.org/packages/27/ed/4b0aabd8c984ff020bca78b6ef0d1159bf0a7e3df855e177ce8d878fd1c0/google_antigravity-0.1.19-py3-none-macosx_11_0_arm64.whl",
-      "hash": "sha256-lhuueC+5rCuUfsQbUYpco/cABZ/ICUFl4AU80tR8+7w="
+      "url": "https://files.pythonhosted.org/packages/77/1c/115e346cf2b10eb9632e862de5e2a130fc7f33ac0a352558067e9e863617/google_antigravity-0.1.20-py3-none-macosx_11_0_arm64.whl",
+      "hash": "sha256-qd8PEXQHp9OcSgPel/TgguHC8kZQ3MqHZwbCNXQRgVk="
     },
     "x86_64-darwin": {
-      "url": "https://files.pythonhosted.org/packages/88/43/5ea89b98b12aa008304cb2dbe19088306060ae09a076247e3f01c6a78f8c/google_antigravity-0.1.19-py3-none-macosx_11_0_x86_64.whl",
-      "hash": "sha256-uyJkwdxNHMWg1enLmrCGKKJ2bM31cctVrZeAYkwlhTA="
+      "url": "https://files.pythonhosted.org/packages/1d/b3/49c09f0645d6d9c08e559bbb0a5adc45d22e299c541439ff36b8d8ed869a/google_antigravity-0.1.20-py3-none-macosx_11_0_x86_64.whl",
+      "hash": "sha256-i+uhIohzPp8/U+ERAzGMhtvWgUEViQuHZ+tLWXbzY6Y="
     },
     "aarch64-linux": {
-      "url": "https://files.pythonhosted.org/packages/ca/91/9a3ec66dce474abbeac34e1e44c093377f5698caf13861c3481f0c2b26c8/google_antigravity-0.1.19-py3-none-manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl",
-      "hash": "sha256-+7ZE9bryd3fLrGf6V4vZAVaJobD8jrnfxNasIOLh328="
+      "url": "https://files.pythonhosted.org/packages/2a/b2/f0ebc284dbdf3217ed62abd3a6b290effa7ae025555512aa9700fd20bb22/google_antigravity-0.1.20-py3-none-manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl",
+      "hash": "sha256-FYO1mrRZUiMUA9qCPnBqkdZ/gnyy+/J/l8K5omqAPwk="
     },
     "x86_64-linux": {
-      "url": "https://files.pythonhosted.org/packages/6b/41/9b651b0a5490ce24c1249edf4a46e856f0be745ac846b31b19b37a9ef32b/google_antigravity-0.1.19-py3-none-manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl",
-      "hash": "sha256-bt+QaRM9YwBou3isT920VB9F+O9R1dcxG8ohXUreRp4="
+      "url": "https://files.pythonhosted.org/packages/a1/38/a93e755d9504455f29ec483cd24e60c790ca82101191fe663e546f48bea1/google_antigravity-0.1.20-py3-none-manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl",
+      "hash": "sha256-/5VkLqTgpl1ujY2LmRziKGjQRxcAXNxKYKvypq9Swvw="
     }
   }
 }
