@@ -1,20 +1,20 @@
 {
   "Antigravity 2.0": {
     "x86_64-linux": {
-      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.0-6494382996717568/linux-x64/Antigravity.tar.gz",
-      "hash": "sha256-v6KAbNk1hpeRhFlRwQBlU+sdw2MROnNuxR5YR+SkddU="
+      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.1-5614635819335680/linux-x64/Antigravity.tar.gz",
+      "hash": "sha256-7a8+fqwL71SoDPZVgxrVk96UYiH6rtOhifnuTiSe+N8="
     },
     "aarch64-linux": {
-      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.0-6494382996717568/linux-arm/Antigravity.tar.gz",
-      "hash": "sha256-YqKvf3ZIzJ4CYgjC2a45dal9WHwO4X3SHCaeAftGFLY="
+      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.1-5614635819335680/linux-arm/Antigravity.tar.gz",
+      "hash": "sha256-UwL32Qvz3f/YXmxZzHGBVkaaG5585sy7AEDpL6Au8Gs="
     },
     "x86_64-darwin": {
-      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.0-6494382996717568/darwin-x64/Antigravity.dmg",
-      "hash": "sha256-o4Rlsxn+K7+b+wUzzyXjmKP2/hO0Vnd+2mCf91dnbPQ="
+      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.1-5614635819335680/darwin-x64/Antigravity.dmg",
+      "hash": "sha256-pLBOH5gIPxOgQMz30THKJd6ZRjgZFQjU5GDXxPwQb2c="
     },
     "aarch64-darwin": {
-      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.0-6494382996717568/darwin-arm/Antigravity.dmg",
-      "hash": "sha256-Q5ENlD6kSbF2dogIzxpBjf6t5EtvKhEbosJjTtfRkWo="
+      "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.21.1-5614635819335680/darwin-arm/Antigravity.dmg",
+      "hash": "sha256-MXOHnKhDdnlO1Jx5Najfz6FFoXyl4/Z5MpH0OAO+BuI="
     }
   },
   "Antigravity IDE": {
@@ -55,20 +55,20 @@
   },
   "Antigravity SDK": {
     "aarch64-darwin": {
-      "url": "https://files.pythonhosted.org/packages/77/1c/115e346cf2b10eb9632e862de5e2a130fc7f33ac0a352558067e9e863617/google_antigravity-0.1.20-py3-none-macosx_11_0_arm64.whl",
-      "hash": "sha256-qd8PEXQHp9OcSgPel/TgguHC8kZQ3MqHZwbCNXQRgVk="
+      "url": "https://files.pythonhosted.org/packages/46/2a/818a46136642aeb876fd7ec9e595ab443f6ce3cc6418c144a453e2e6203a/google_antigravity-0.1.21-py3-none-macosx_11_0_arm64.whl",
+      "hash": "sha256-ONfC4PrxDY+pHey/sIR3jllApe8Nlb5GldvYGTNP3uc="
     },
     "x86_64-darwin": {
-      "url": "https://files.pythonhosted.org/packages/1d/b3/49c09f0645d6d9c08e559bbb0a5adc45d22e299c541439ff36b8d8ed869a/google_antigravity-0.1.20-py3-none-macosx_11_0_x86_64.whl",
-      "hash": "sha256-i+uhIohzPp8/U+ERAzGMhtvWgUEViQuHZ+tLWXbzY6Y="
+      "url": "https://files.pythonhosted.org/packages/02/0b/6edd982e86b14e5f3a8b3909de8f0397d37c118d7d1882b2d9238e86d19a/google_antigravity-0.1.21-py3-none-macosx_11_0_x86_64.whl",
+      "hash": "sha256-2nxDDvyD8eBhsZa49QXTp+8lg3FSiIttc8SzhJsJtMI="
     },
     "aarch64-linux": {
-      "url": "https://files.pythonhosted.org/packages/2a/b2/f0ebc284dbdf3217ed62abd3a6b290effa7ae025555512aa9700fd20bb22/google_antigravity-0.1.20-py3-none-manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl",
-      "hash": "sha256-FYO1mrRZUiMUA9qCPnBqkdZ/gnyy+/J/l8K5omqAPwk="
+      "url": "https://files.pythonhosted.org/packages/6e/93/c940fedbaad8523748f019dd6c6afa9cd51572dcbfdb5d1c0846a68cbe46/google_antigravity-0.1.21-py3-none-manylinux_2_17_aarch64.musllinux_1_1_aarch64.whl",
+      "hash": "sha256-/mz6ZnHghekz0izCoWnGpfHQse7qygYffsZOUPeG/5g="
     },
     "x86_64-linux": {
-      "url": "https://files.pythonhosted.org/packages/a1/38/a93e755d9504455f29ec483cd24e60c790ca82101191fe663e546f48bea1/google_antigravity-0.1.20-py3-none-manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl",
-      "hash": "sha256-/5VkLqTgpl1ujY2LmRziKGjQRxcAXNxKYKvypq9Swvw="
+      "url": "https://files.pythonhosted.org/packages/6b/82/aa1b88b733a6655b5c99ce219f8e389acffd34619995457f8d6ab00bec6b/google_antigravity-0.1.21-py3-none-manylinux_2_17_x86_64.musllinux_1_1_x86_64.whl",
+      "hash": "sha256-9q9S6Mt004EhZe5/ZeKU+c4EWotQZPkJbGbK3n3yP54="
     }
   }
 }
